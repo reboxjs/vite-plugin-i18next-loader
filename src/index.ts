@@ -14,6 +14,7 @@ import {
   loadAndParse,
   resolvedVirtualModuleId,
   resolvePaths,
+  resolvePathsUsingPackages,
   virtualModuleId,
 } from './utils'
 
@@ -37,7 +38,19 @@ export interface Options {
    * Default: 'warn'
    */
   logLevel?: LogLevel
-
+  /**
+   * Folder Name for locales directory
+   *
+   * Default: 'locales'
+   */
+  folderName?: string
+  /**
+   * A list of package names under node_modules that will contain the locales directory
+   * It can accept the glob value as well For Example packages: ['@dummy-package/*-browser']
+   *
+   * Default: 'locales'
+   */
+  packages: string[]
   /**
    * Glob patterns to match files
    *
@@ -71,10 +84,16 @@ const factory = (options: Options) => {
   const log = createLogger(options.logLevel || 'warn', { prefix: '[i18next-loader]' })
 
   function loadLocales() {
-    const localeDirs = resolvePaths(options.paths, process.cwd())
-    assertExistence(localeDirs)
+    let localeDirs = []
+    const localesDirFolderName = options.folderName || 'locales'
 
-    //
+    if (options.packages.length) {
+      localeDirs = resolvePathsUsingPackages(options.packages, localesDirFolderName)
+    } else {
+      localeDirs = resolvePaths(options.paths, process.cwd())
+    }
+
+    assertExistence(localeDirs)
     let appResBundle: ResBundle = {}
     loadedFiles = [] // reset
     log.info('Bundling locales (ordered least specific to most):', {
@@ -177,7 +196,6 @@ ${bundle}
       }
       return bundle
     },
-
     /**
      * Watch translation message files and trigger an update.
      *
