@@ -1,5 +1,6 @@
 import fs from 'node:fs'
-import path from 'node:path'
+import path, { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import globAll from 'glob-all'
 import yaml from 'js-yaml'
@@ -53,4 +54,26 @@ export function loadAndParse(langFile: string) {
     parsedContent = JSON.parse(fileContent)
   }
   return parsedContent
+}
+
+export function getRootPath() {
+  const __dirname = dirname(fileURLToPath(import.meta.url))
+  const rootPath = __dirname.split('/node_modules')[0]
+  return rootPath
+}
+
+export function resolvePathsUsingPackages(packages: string[], folderName: string) {
+  const basePath = getRootPath()
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  const folders = globAll.sync(
+    packages.map((item) => `${basePath}/node_modules/${item}`),
+  ) as string[]
+  const localesDirs = folders.reduce((acc: string[], curr: string) => {
+    const dir = `${curr}/lib/${folderName}`
+    if (fs.existsSync(dir)) {
+      return [...acc, dir] as string[]
+    }
+    return acc
+  }, [])
+  return localesDirs
 }
